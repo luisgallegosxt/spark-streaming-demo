@@ -1,0 +1,44 @@
+services:
+  zookeeper:
+    image: debezium/zookeeper:latest
+    ports:
+     - "2181:2181"
+  kafka:
+    image: debezium/kafka:latest
+    ports:
+     - "9092:9092"
+    links:
+     - zookeeper
+    environment:
+      ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://<public-ip>:9092
+  postgres:
+    image: debezium/postgres:16
+    ports:
+     - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sales_db
+  connect:
+    image: debezium/connect:latest
+    ports:
+     - "8083:8083"
+    links:
+     - kafka
+     - postgres
+    environment:
+     - BOOTSTRAP_SERVERS=<public-ip>:9092
+     - GROUP_ID=1
+     - CONFIG_STORAGE_TOPIC=my_connect_configs
+     - OFFSET_STORAGE_TOPIC=my_connect_offsets
+     - KEY_CONVERTER_SCHEMAS_ENABLE=false
+     - VALUE_CONVERTER_SCHEMAS_ENABLE=false
+     - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+     - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+     - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+     - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+     - CONNECT_PRODUCER_INTERCEPTORS=io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor
+     - CONNECT_CONSUMER_INTERCEPTORS=io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor
+     - CONNECT_REST_ADVERTISED_HOST_NAME=connect
+     - CONNECT_PLUGIN_PATH=/kafka/connect,/usr/share/java
